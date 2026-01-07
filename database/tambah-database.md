@@ -1,85 +1,90 @@
-# Panduan Membuat User Admin Baru (Root-Level) di MariaDB
+# Panduan Manajemen MariaDB: User & Database
 
-Dokumen ini berisi langkah-langkah teknis untuk membuat user baru di MariaDB dengan hak akses administratif penuh yang setara dengan user root.
-
----
-
-## Prasyarat
-
-* Memiliki akses ke terminal/SSH.
-* Memiliki akses ke akun root MariaDB yang ada saat ini.
+Dokumen ini berisi instruksi lengkap untuk administrasi dasar MariaDB melalui Command Line Interface (CLI).
 
 ---
 
-## Langkah-langkah
+## 🚀 1. Manajemen User Admin (Root-Level)
 
-### 1. Masuk ke Konsol MariaDB
-
-Langkah pertama adalah masuk ke sistem MariaDB menggunakan akun administratif:
-
-```bash
-sudo mysql -u root -p
-
-```
-
-### 2. Membuat User Baru
-
-Gunakan perintah berikut untuk membuat user. Ganti admin_baru dan password_anda sesuai keinginan Anda.
+### Membuat User Baru
 
 ```sql
+-- Masuk ke MariaDB: sudo mysql -u root -p
 CREATE USER 'admin_baru'@'localhost' IDENTIFIED BY 'password_anda';
 
-```
-
-* **'localhost'**: User hanya bisa login dari server lokal.
-* **'%'**: Ganti localhost dengan % jika ingin user bisa login secara remote.
-
-### 3. Memberikan Hak Akses Penuh
-
-Berikan semua izin (privileges) agar user memiliki kemampuan yang sama dengan root:
-
-```sql
+-- Memberikan hak akses penuh
 GRANT ALL PRIVILEGES ON *.* TO 'admin_baru'@'localhost' WITH GRANT OPTION;
-
-```
-
-### 4. Menyimpan Perubahan
-
-Pastikan MariaDB memuat ulang tabel hak akses agar perubahan segera berlaku:
-
-```sql
 FLUSH PRIVILEGES;
 
 ```
 
-### 5. Keluar dari Sistem
+### Mengubah Password User
 
 ```sql
-EXIT;
+ALTER USER 'admin_baru'@'localhost' IDENTIFIED BY 'password_baru_anda';
+FLUSH PRIVILEGES;
+
+```
+
+### Menghapus User
+
+```sql
+DROP USER 'admin_baru'@'localhost';
 
 ```
 
 ---
 
-## Verifikasi Akun Baru
+## 🗄️ 2. Manajemen Database
 
-Untuk memastikan user baru berfungsi dengan benar, coba login kembali menggunakan kredensial yang baru dibuat:
+### Membuat Database Baru
 
-```bash
-mysql -u admin_baru -p
+```sql
+CREATE DATABASE nama_database_anda;
 
 ```
 
-Setelah login, Anda bisa mengecek hak akses Anda dengan perintah:
+### Melihat Daftar Database
+
+Untuk memastikan database sudah dibuat atau ada:
 
 ```sql
-SHOW GRANTS FOR 'admin_baru'@'localhost';
+SHOW DATABASES;
+
+```
+
+### Menghapus Database
+
+> [!CAUTION]
+> Menghapus database akan menghapus **seluruh tabel dan data** di dalamnya secara permanen.
+
+```sql
+DROP DATABASE nama_database_anda;
 
 ```
 
 ---
 
-## Catatan Keamanan
+## 📋 Ringkasan Perintah Cepat
 
-1. **Password Kuat**: Gunakan kombinasi huruf besar, kecil, angka, dan simbol.
-2. **Akses Remote**: Jika Anda menggunakan '%', pastikan Firewall server Anda dikonfigurasi dengan benar.
+| Aksi | Perintah SQL |
+| --- | --- |
+| **Buat User** | `CREATE USER 'user'@'host' IDENTIFIED BY 'pass';` |
+| **Hapus User** | `DROP USER 'user'@'host';` |
+| **Ganti Pass** | `ALTER USER 'user'@'host' IDENTIFIED BY 'new_pass';` |
+| **Buat DB** | `CREATE DATABASE nama_db;` |
+| **Hapus DB** | `DROP DATABASE nama_db;` |
+| **Lihat DB** | `SHOW DATABASES;` |
+| **Lihat User** | `SELECT user, host FROM mysql.user;` |
+
+---
+
+## 💡 Tips Tambahan
+
+* Sebelum menghapus database, sangat disarankan untuk melakukan **backup** menggunakan perintah:
+`mysqldump -u root -p nama_database > backup_file.sql`
+* Selalu akhiri setiap perintah SQL dengan titik koma (`;`).
+
+---
+
+Apakah Anda ingin saya buatkan panduan cara melakukan **backup dan restore** database juga untuk melengkapi file README ini?
