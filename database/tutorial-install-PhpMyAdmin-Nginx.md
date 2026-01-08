@@ -1,28 +1,36 @@
-### 🛠️ Persiapan Awal
+### 🛠️ Langkah 1: Persiapan & Download phpMyAdmin
 
-Pastikan server Anda sudah terpasang **NGINX**, **MySQL/MariaDB**, dan **PHP-FPM**.
+Kita akan mengunduh file resmi dan menempatkannya di direktori web.
 
----
-
-### 1. 📥 Download phpMyAdmin
-
-Pertama, kita pindah ke direktori `/var/www` dan unduh versinya yang terbaru.
-
+1. **Masuk ke direktori `/var/www`:**
 ```bash
 cd /var/www
+
+```
+
+
+2. **Unduh versi terbaru:**
+```bash
 sudo wget https://www.phpmyadmin.net/downloads/phpMyAdmin-latest-all-languages.tar.gz
 
 ```
 
-* **Ekstrak file:** `sudo tar xvf phpMyAdmin-latest-all-languages.tar.gz`
-* **Ubah nama folder:** `sudo mv phpMyAdmin-*-all-languages phpmyadmin`
-* **Hapus file zip:** `sudo rm phpMyAdmin-latest-all-languages.tar.gz`
+
+3. **Ekstrak dan Rapikan:**
+```bash
+sudo tar xvf phpMyAdmin-latest-all-languages.tar.gz
+sudo mv phpMyAdmin-*-all-languages phpmyadmin
+sudo rm phpMyAdmin-latest-all-languages.tar.gz
+
+```
+
+
 
 ---
 
-### 2. 🔑 Atur Izin (Permissions)
+### 🔑 Langkah 2: Keamanan Folder & Izin
 
-Agar NGINX bisa membaca file tersebut, kita perlu mengatur kepemilikan foldernya.
+Kita berikan hak akses kepada user NGINX (`www-data`).
 
 ```bash
 sudo chown -R www-data:www-data /var/www/phpmyadmin
@@ -32,31 +40,76 @@ sudo chmod -R 755 /var/www/phpmyadmin
 
 ---
 
-### 3. 🌐 Konfigurasi NGINX Server Block
+### 🛡️ Langkah 3: Konfigurasi Keamanan (Blowfish Secret)
 
-Buat file konfigurasi baru untuk phpMyAdmin agar bisa diakses melalui domain (misal: `db.domainkamu.com`).
+phpMyAdmin membutuhkan 32 karakter acak untuk enkripsi cookie.
 
+1. **Generate kode acak dengan OpenSSL:**
+```bash
+openssl rand -base64 32
+
+```
+
+
+*(Salin hasilnya yang muncul di layar)* 📋
+2. **Buat file konfigurasi:**
+```bash
+cd /var/www/phpmyadmin
+sudo cp config.sample.inc.php config.inc.php
+sudo nano config.inc.php
+
+```
+
+
+3. **Cari baris `blowfish_secret**` dan tempelkan kode tadi:
+```php
+$cfg['blowfish_secret'] = 'HASIL_OPENSSL_KAMU_DISINI';
+
+```
+
+
+*Simpan: `Ctrl+O`, `Enter`, `Ctrl+X`.*
+
+---
+
+### 🌐 Langkah 4: Konfigurasi NGINX (HTTP & SSL Manual)
+
+Karena Certbot terkadang gagal otomatis, kita langsung buat konfigurasi yang mendukung HTTPS.
+
+1. **Buat file konfigurasi baru:**
 ```bash
 sudo nano /etc/nginx/sites-available/phpmyadmin
 
 ```
 
-Tempelkan kode berikut (sesuaikan `server_name` dan versi `php-fpm` kamu):
 
+2. **Tempelkan kode di bawah ini** (Sesuaikan domain):
 ```nginx
 server {
     listen 80;
-    server_name db.domainkamu.com; # 👈 Ganti dengan domain/subdomainmu
+    server_name pma.alfikz.my.id;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name pma.alfikz.my.id;
+
     root /var/www/phpmyadmin;
     index index.php index.html;
 
+    # Sertifikat SSL dari Certbot
+    ssl_certificate /etc/letsencrypt/live/pma.alfikz.my.id/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/pma.alfikz.my.id/privkey.pem;
+
+    # Pengaturan PHP
     location / {
         try_files $uri $uri/ =404;
     }
 
     location ~ \.php$ {
         include snippets/fastcgi-php.conf;
-        fastcgi_pass unix:/var/run/php/php8.3-fpm.sock; # 👈 Cek versi PHP-mu
+        fastcgi_pass unix:/var/run/php/php8.3-fpm.sock;
     }
 
     location ~ /\.ht {
@@ -66,8 +119,8 @@ server {
 
 ```
 
-**Aktifkan konfigurasi:**
 
+3. **Aktifkan Konfigurasi:**
 ```bash
 sudo ln -s /etc/nginx/sites-available/phpmyadmin /etc/nginx/sites-enabled/
 sudo nginx -t
@@ -75,37 +128,48 @@ sudo systemctl reload nginx
 
 ```
 
+
+
 ---
 
-### 4. 🔒 Amankan dengan SSL (Certbot)
+### 🔒 Langkah 5: Aktivasi SSL (Certbot)
 
-Sekarang kita enkripsi koneksinya agar data database kamu tidak disadap.
+Sekarang kita panggil Certbot untuk menerbitkan sertifikatnya.
 
 ```bash
 sudo apt update
 sudo apt install certbot python3-certbot-nginx -y
+sudo certbot --nginx -d pma.alfikz.my.id
 
 ```
 
-**Jalankan Certbot:**
+> [!NOTE]
+> Jika Certbot bertanya "Redirection?", pilih **2 (Redirect)**. Jika muncul error "Could not install", tidak masalah karena kita sudah memasukkan path sertifikat secara manual di Langkah 4.
 
+---
+
+### 🧪 Langkah 6: Uji Coba Akhir
+
+1. **Restart PHP & NGINX:**
 ```bash
-sudo certbot --nginx -d db.domainkamu.com
+sudo systemctl restart php8.3-fpm
+sudo systemctl restart nginx
 
 ```
 
-*Ikuti instruksi di layar, pilih **2** jika ditanya ingin mengalihkan (redirect) semua trafik HTTP ke HTTPS.*
+
+2. **Buka di Browser:**
+Akses `https://pma.alfikz.my.id`
 
 ---
 
-### 5. 🧪 Selesai & Uji Coba
+### 👮 Tips Tambahan (Sangat Disarankan)
 
-Buka browser dan akses domain kamu:
-👉 `https://db.domainkamu.com`
+Agar lebih aman, jangan login pakai `root`. Buat user admin baru di terminal MySQL:
 
-> [!IMPORTANT]
-> **Tips Keamanan:** Jangan gunakan user `root` untuk login jarak jauh. Buatlah user database khusus dengan akses terbatas, atau tambahkan proteksi password tambahan (.htpasswd) pada folder phpmyadmin.
+```sql
+CREATE USER 'admin_pma'@'localhost' IDENTIFIED BY 'PasswordKuatKamu';
+GRANT ALL PRIVILEGES ON *.* TO 'admin_pma'@'localhost' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
 
----
-
-©2026-COSAX
+```
