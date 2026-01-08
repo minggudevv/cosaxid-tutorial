@@ -87,20 +87,20 @@ sudo nano /etc/nginx/sites-available/phpmyadmin
 ```nginx
 server {
     listen 80;
-    server_name pma.alfikz.my.id;
+    server_name pma.domain.mu;
     return 301 https://$host$request_uri;
 }
 
 server {
     listen 443 ssl;
-    server_name pma.alfikz.my.id;
+    server_name pma.domain.mu;
 
     root /var/www/phpmyadmin;
     index index.php index.html;
 
     # Sertifikat SSL dari Certbot
-    ssl_certificate /etc/letsencrypt/live/pma.alfikz.my.id/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/pma.alfikz.my.id/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/pma.domain.mu/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/pma.domain.mu/privkey.pem;
 
     # Pengaturan PHP
     location / {
@@ -139,7 +139,7 @@ Sekarang kita panggil Certbot untuk menerbitkan sertifikatnya.
 ```bash
 sudo apt update
 sudo apt install certbot python3-certbot-nginx -y
-sudo certbot --nginx -d pma.alfikz.my.id
+sudo certbot --nginx -d pma.domain.mu
 
 ```
 
@@ -159,7 +159,7 @@ sudo systemctl restart nginx
 
 
 2. **Buka di Browser:**
-Akses `https://pma.alfikz.my.id`
+Akses `https://pma.domaain.mu`
 
 ---
 
